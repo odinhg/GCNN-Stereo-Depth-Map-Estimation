@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .stereoconv import StereoConv2d, StereoMaxPool2d, StereoBatchNorm2d
+from .stereoconv import StereoConv2d, StereoMaxPool2d, StereoUpsample2d, StereoBatchNorm2d
 from utils import Group 
 
 """
@@ -152,6 +152,24 @@ class StereoGMaxPool2d(StereoMaxPool2d):
         out = torch.stack(feature_maps, dim=1)
         return out
 
+class StereoGUpsample2d(StereoUpsample2d):
+    """
+        Upsample (default x2) for signals on the affine group.
+    """
+    def __init__(self, group: Group, scale_factor: int=2, mode: str="nearest"):
+        super().__init__(scale_factor, mode)
+        self.n = group.order
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        feature_maps = []
+        for j in range(self.n):
+            out_left = F.interpolate(x[:,j,:,0], scale_factor=self.scale_factor, mode=self.mode)
+            out_right = F.interpolate(x[:,j,:,1], scale_factor=self.scale_factor, mode=self.mode)
+            out = torch.stack([out_left, out_right], dim=2)
+            feature_maps.append(out)
+        out = torch.stack(feature_maps, dim=1)
+        return out
+
 class StereoGBatchNorm2d(nn.Module):
     """
         Batch normalization for stereo signals on the group. Note that we use one scale and one bias parameter for each group channel as described in the paper by Cohen and Welling.
@@ -187,6 +205,21 @@ class StereoGConvBlock(nn.Module):
                             nn.ReLU(),
                         )
 
+    def forward(self, x):
+        out = self.layers(x)
+        return out
+
+class UNetGConvBlock(nn.Module):
+    """
+        Standard double convolution block for UNet model. Uses 3x3 kernels with padding 1.
+    """
+    def __init__(self, group: Group, in_channels: int, out_channels: int):
+        super().__init__()
+        self.layers = nn.Sequential(
+                        StereoGConvBlock(group, in_channels, out_channels),
+                        StereoGConvBlock(group, out_channels, out_channels)
+                    )
+    
     def forward(self, x):
         out = self.layers(x)
         return out

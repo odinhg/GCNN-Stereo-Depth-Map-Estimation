@@ -63,7 +63,7 @@ class StereoMaxPool2d(nn.Module):
     """
         Max pooling for stereo images.
     """
-    def __init__(self, kernel_size: int=2, stride:int=2):
+    def __init__(self, kernel_size: int=2, stride: int=2):
         super().__init__()
         self.kernel_size = kernel_size
         self.stride = stride
@@ -71,6 +71,21 @@ class StereoMaxPool2d(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out_left = F.max_pool2d(x[:,:,0], self.kernel_size, stride=self.stride)
         out_right = F.max_pool2d(x[:,:,1], self.kernel_size, stride=self.stride)
+        out = torch.stack([out_left, out_right], dim=2)
+        return out
+
+class StereoUpsample2d(nn.Module):
+    """
+        Upsample/interpolate stereo image. Needed for U-Net architecture for depth estimation.
+    """
+    def __init__(self, scale_factor: int=2, mode: str="nearest"):
+        super().__init__()
+        self.scale_factor = scale_factor
+        self.mode = mode
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out_left = F.interpolate(x[:,:,0], scale_factor=self.scale_factor, mode=self.mode)
+        out_right = F.interpolate(x[:,:,1], scale_factor=self.scale_factor, mode=self.mode)
         out = torch.stack([out_left, out_right], dim=2)
         return out
 
@@ -86,6 +101,21 @@ class StereoConvBlock(nn.Module):
                             nn.ReLU(),
                         )
 
+    def forward(self, x):
+        out = self.layers(x)
+        return out
+
+class UNetConvBlock(nn.Module):
+    """
+        Standard double convolution block for UNet model with stereo images. Uses 3x3 kernels with padding 1.
+    """
+    def __init__(self, in_channels: int, out_channels: int):
+        super().__init__()
+        self.layers = nn.Sequential(
+                        StereoConvBlock(in_channels, out_channels),
+                        StereoConvBlock(out_channels, out_channels)
+                    )
+    
     def forward(self, x):
         out = self.layers(x)
         return out

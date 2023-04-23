@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 
 from .groupconv import StereoZ2ConvG, StereoGMaxPool2d, StereoGConvBlock, StereoGBatchNorm2d, StereoGAveragePool
-from .stereoconv import StereoConvBlock
 from .cnn import init_weights
 
 class GCNNModel(nn.Module):
