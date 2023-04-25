@@ -37,7 +37,7 @@ def choose_model(configs):
 
     return config
 
-def visualize_stereo_image(x: torch.Tensor) -> None:
+def visualize_stereo_image(x: torch.Tensor, filename: str="") -> None:
     """
         Visualize stereo image represented as tensor of shape (3, 2, H, W).
     """
@@ -46,9 +46,12 @@ def visualize_stereo_image(x: torch.Tensor) -> None:
     y = y.cpu().detach() * 255
     y = y.type(torch.uint8).numpy()
     image = Image.fromarray(y, mode="RGB")
-    image.show()
+    if filename:
+        image.save(filename)
+    else:
+        image.show()
 
-def visualize_stereo_depth_map(x: torch.Tensor) -> None:
+def visualize_stereo_depth_map(x: torch.Tensor, filename: str="") -> None:
     """
         Visualize stereo depth map represented as tensor of shape (1, 2, H, W).
         Note that we normalize distances (originally in cm) to lie in the interval [0,1].
@@ -59,5 +62,9 @@ def visualize_stereo_depth_map(x: torch.Tensor) -> None:
     y = y.cpu().detach()
     y = y.type(torch.uint8).numpy()
     image = Image.fromarray(y, mode="L")
-    image.show()
+    if filename:
+        image.save(filename)
+    else:
+        image.show()
+
 

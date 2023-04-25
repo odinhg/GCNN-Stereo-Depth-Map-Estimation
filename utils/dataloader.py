@@ -23,12 +23,13 @@ class ImageDataset(Dataset):
         self.length = len(self.images_filenames) // 2
         
         self.transforms = Compose([ToTensor(), Resize(size=image_size, antialias=False)])
+        self.depth_map_transforms = Resize(size=image_size, antialias=False)
 
         # Mean and standard deviations for left and right views computed on training data
-        #self.means = [(0.3998, 0.5025, 0.5001), (0.3980, 0.5005, 0.4981)]
-        #self.stds = [(0.2175, 0.2275, 0.2347), (0.2214, 0.2236, 0.2304)]
-        #self.normalize_left = Normalize(self.means[0], self.stds[0])
-        #self.normalize_right = Normalize(self.means[1], self.stds[1])
+        self.means = [(0.3998, 0.5025, 0.5001), (0.3980, 0.5005, 0.4981)]
+        self.stds = [(0.2175, 0.2275, 0.2347), (0.2214, 0.2236, 0.2304)]
+        self.normalize_left = Normalize(self.means[0], self.stds[0])
+        self.normalize_right = Normalize(self.means[1], self.stds[1])
 
     def __len__(self) -> int:
         return self.length 
@@ -52,7 +53,7 @@ class ImageDataset(Dataset):
             decoded = struct.unpack(fmt, buffer)
             shape = (height, width, 3) if channels == 3 else (height, width)
             out = np.flipud(np.reshape(decoded, shape)) * scale
-            return torch.Tensor(out)
+            return torch.Tensor(out).unsqueeze(0)
 
     def load_depth_map(self, idx: int) -> torch.Tensor:
         """
@@ -61,7 +62,7 @@ class ImageDataset(Dataset):
         """
         left_view = self.load_pfm(join(self.depth_maps_dir, f"L_{idx+1:05}.pfm"))
         right_view = self.load_pfm(join(self.depth_maps_dir, f"R_{idx+1:05}.pfm"))
-        return torch.stack([left_view, right_view], dim=0).unsqueeze(0)
+        return torch.stack([self.depth_map_transforms(left_view), self.depth_map_transforms(right_view)], dim=1)
 
     def load_stereo_image(self, idx: int) -> torch.Tensor:
         """
@@ -79,8 +80,8 @@ class ImageDataset(Dataset):
         """
         image = self.load_stereo_image(idx)
         gt = self.load_depth_map(idx)
-        #image[:,0] = self.normalize_left(image[:,0])
-        #image[:,1] = self.normalize_right(image[:,1])
+        image[:,0] = self.normalize_left(image[:,0])
+        image[:,1] = self.normalize_right(image[:,1])
         return (image, gt)
 
     def label_str(self, label: int) -> str:
@@ -96,7 +97,7 @@ def seed_worker(worker_id):
     random.seed(worker_seed)
 
 def create_dataloaders(batch_size: int, test: float, val: float, image_size: tuple[int, int] = (480, 640), 
-                        random_seed: int = 42, num_workers: int = 4) -> tuple[DataLoader, DataLoader, DataLoader]:
+                        random_seed: int = 42, num_workers: int = 8) -> tuple[DataLoader, DataLoader, DataLoader]:
     """
         Create data loaders for training, validation and test datasets.
     """

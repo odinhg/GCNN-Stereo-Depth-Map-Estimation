@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import time
 
 from .earlystopper import EarlyStopper
+from .misc import visualize_stereo_depth_map
 
 # TODO: should change some variable names since we're now doing regression, not classification
 # so "probs" and "labels" doesn't really make sense.
@@ -97,12 +98,12 @@ class Trainer():
     def save_loss_plot(self):
         print(f"Saving loss plot to {self.loss_plot_file}...")
         fig, ax = plt.subplots(ncols=1, figsize=(12, 6))
-        ax[0].plot(self.train_history["train_loss"], label="Training")
-        ax[0].plot(self.train_history["val_loss"], label="Validation")
-        ax[0].set_title("Loss")
-        ax[0].set_xlabel("Step")
-        ax[0].set_ylabel("Mean loss")
-        ax[0].legend(loc="upper right")
+        ax.plot(self.train_history["train_loss"], label="Training")
+        ax.plot(self.train_history["val_loss"], label="Validation")
+        ax.set_title("Loss")
+        ax.set_xlabel("Step")
+        ax.set_ylabel("Mean loss")
+        ax.legend(loc="upper right")
 
         fig.suptitle("Loss and accuracy")
         fig.tight_layout()
@@ -119,10 +120,14 @@ class Trainer():
         self.model.load_state_dict(torch.load(self.checkpoint_file))
         self.model.eval()
         print("Evaluating model on test data...")
+        k = 1
         with torch.no_grad():
             test_accuracies = []
             for data in tqdm(self.test_dataloader): 
                 images, labels = self.get_data_and_targets(data) 
-                probs = self.model(images)
+                outputs = self.model(images)
+                for image in outputs:
+                    visualize_stereo_depth_map(image, f"figs/test_pred_{k:05}.png")
+                    k += 1
 
         # TODO: Compute mean loss on training data
