@@ -28,7 +28,7 @@ config = {
 
 
 # Data loaders
-image_size = (96,128) #(240, 320)#(480, 640)
+image_size = (240, 320)#(96,128) #(240, 320)#(480, 640)
 train_dl, val_dl, test_dl = create_dataloaders(batch_size=config["batch_size"], val=val_fraction, test=test_fraction, image_size=image_size)
 
 # Functions and Cayley table representing the symmetry group of a rectangle
@@ -38,7 +38,7 @@ cayley_table = [[0,1,2,3],
                 [2,3,0,1],
                 [3,2,1,0]]
 group = Group(functions, cayley_table)
-num_features = [3,4,8,16,16,32]
+num_features = [3,16,16,16,16,32]
 model = GUNetModel(group, num_features)
 
 # Print summary of layers and number of parameters
@@ -46,8 +46,8 @@ summary(model)
 
 # Initialize trainer with loss function and optimizer
 #loss_function = nn.MSELoss(reduction="mean")
-#loss_function = nn.L1Loss(reduction="mean")
-loss_function = BerHuLoss()
+loss_function = nn.L1Loss(reduction="mean")
+#loss_function = BerHuLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=config["lr"]) #, weight_decay=1e-2) 
 trainer = Trainer(model, train_dl, val_dl, test_dl, config, loss_function, device)
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5,20,50,80], gamma=0.1) 

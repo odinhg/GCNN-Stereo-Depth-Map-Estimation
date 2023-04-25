@@ -216,10 +216,15 @@ class UNetGConvBlock(nn.Module):
     def __init__(self, group: Group, in_channels: int, out_channels: int):
         super().__init__()
         self.layers = nn.Sequential(
-                        StereoGConvBlock(group, in_channels, out_channels),
-                        StereoGConvBlock(group, out_channels, out_channels)
+                        StereoGConv(group, in_channels, out_channels, 3, 1, 1),
+                        StereoGBatchNorm2d(group, out_channels),
+                        StereoGConv(group, out_channels, out_channels, 3, 1, 1),
+                        StereoGBatchNorm2d(group, out_channels),
+                        nn.ReLU(),
                     )
+
+        self.conv_1x1 = StereoGConv(group, in_channels, out_channels, 1, 0, 1)
     
     def forward(self, x):
-        out = self.layers(x)
+        out = self.layers(x) + self.conv_1x1(x)
         return out

@@ -9,7 +9,6 @@ from pathlib import Path
 import struct
 from PIL import Image
 
-
 class ImageDataset(Dataset):
     """ 
         Dataset class for stereo images. 
@@ -26,6 +25,7 @@ class ImageDataset(Dataset):
         self.depth_map_transforms = Resize(size=image_size, antialias=False)
 
         # Mean and standard deviations for left and right views computed on training data
+        # TODO: Update these values
         self.means = [(0.3998, 0.5025, 0.5001), (0.3980, 0.5005, 0.4981)]
         self.stds = [(0.2175, 0.2275, 0.2347), (0.2214, 0.2236, 0.2304)]
         self.normalize_left = Normalize(self.means[0], self.stds[0])
